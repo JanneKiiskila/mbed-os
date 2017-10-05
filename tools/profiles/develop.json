@@ -25,7 +25,7 @@
         "ld": ["--legacyalign", "--no_strict_wchar_size", "--no_strict_enum_size"]
     },
     "ARM": {
-        "common": ["-c", "--gnu", "-Otime", "--split_sections",
+        "common": ["-c", "--gnu", "-Ospace", "--split_sections",
                    "--apcs=interwork", "--brief_diagnostics", "--restrict",
                    "--multibyte_chars", "-O3"],
         "asm": [],
@@ -34,7 +34,7 @@
         "ld": ["--show_full_path"]
     },
     "uARM": {
-        "common": ["-c", "--gnu", "-Otime", "--split_sections",
+        "common": ["-c", "--gnu", "-Ospace", "--split_sections",
                    "--apcs=interwork", "--brief_diagnostics", "--restrict",
                    "--multibyte_chars", "-O3", "-D__MICROLIB",
                    "--library_type=microlib", "-DMBED_RTOS_SINGLE_THREAD"],
