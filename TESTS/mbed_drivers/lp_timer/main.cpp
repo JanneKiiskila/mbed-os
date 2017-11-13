@@ -48,13 +48,13 @@ extern uint32_t SystemCoreClock;
  *   DELTA = TOLERANCE_FACTOR / SystemCoreClock * US_FACTOR
  *
  *   e.g.
- *   For K64F          DELTA = (80000 / 120000000) * 1000000 = 666[us]
- *   For NUCLEO_F070RB DELTA = (80000 /  48000000) * 1000000 = 1666[us]
- *   For NRF51_DK      DELTA = (80000 /  16000000) * 1000000 = 5000[us]
+ *   For K64F          DELTA = (40000 / 120000000) * 1000000 = 333[us]
+ *   For NUCLEO_F070RB DELTA = (40000 /  48000000) * 1000000 = 833[us]
+ *   For NRF51_DK      DELTA = (40000 /  16000000) * 1000000 = 2500[us]
  */
 #define US_PER_SEC       1000000
 #define US_PER_MSEC      1000
-#define TOLERANCE_FACTOR 80000.0f
+#define TOLERANCE_FACTOR 40000.0f
 #define US_FACTOR        1000000.0f
 
 static const int delta_sys_clk_us = ((int) (TOLERANCE_FACTOR / (float) SystemCoreClock * US_FACTOR));
@@ -78,9 +78,9 @@ void test_lptimer_creation()
 
     /* Check results. */
     TEST_ASSERT_EQUAL_FLOAT(0, lp_timer.read());
-    TEST_ASSERT_EQUAL_INT32(0, lp_timer.read_ms());
-    TEST_ASSERT_EQUAL_INT32(0, lp_timer.read_us());
-    TEST_ASSERT_EQUAL_UINT64(0, lp_timer.read_high_resolution_us());
+    TEST_ASSERT_EQUAL(0, lp_timer.read_ms());
+    TEST_ASSERT_EQUAL(0, lp_timer.read_us());
+    TEST_ASSERT_EQUAL(0, lp_timer.read_high_resolution_us());
 
     /* Wait 10 ms.
      * After that operation timer read routines should still return 0. */
@@ -88,9 +88,9 @@ void test_lptimer_creation()
 
     /* Check results. */
     TEST_ASSERT_EQUAL_FLOAT(0, lp_timer.read());
-    TEST_ASSERT_EQUAL_INT32(0, lp_timer.read_ms());
-    TEST_ASSERT_EQUAL_INT32(0, lp_timer.read_us());
-    TEST_ASSERT_EQUAL_UINT64(0, lp_timer.read_high_resolution_us());
+    TEST_ASSERT_EQUAL(0, lp_timer.read_ms());
+    TEST_ASSERT_EQUAL(0, lp_timer.read_us());
+    TEST_ASSERT_EQUAL(0, lp_timer.read_high_resolution_us());
 }
 
 /* This test verifies if read(), read_us(), read_ms(),
@@ -182,7 +182,7 @@ void test_lptimer_time_accumulation()
     /* Stop the timer. */
     lp_timer.stop();
 
-    /* Check results - totally 1060 ms have elapsed. */
+    /* Check results - totally 5060 ms have elapsed. */
     TEST_ASSERT_FLOAT_WITHIN(DELTA_S(4), 1.060f, lp_timer.read());
     TEST_ASSERT_INT32_WITHIN(DELTA_MS(4), 1060, lp_timer.read_ms());
     TEST_ASSERT_INT32_WITHIN(DELTA_US(4), 1060000, lp_timer.read_us());

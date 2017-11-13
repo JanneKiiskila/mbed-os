@@ -39,13 +39,13 @@ extern uint32_t SystemCoreClock;
  *   DELTA = TOLERANCE_FACTOR / SystemCoreClock * US_FACTOR
  *
  *   e.g.
- *   For K64F          DELTA = (30000 / 120000000) * 1000000 = 250[us]
- *   For NUCLEO_F070RB DELTA = (30000 /  48000000) * 1000000 = 625[us]
- *   For NRF51_DK      DELTA = (30000 /  16000000) * 1000000 = 1875[us]
+ *   For K64F          DELTA = (15000 / 120000000) * 1000000 = 125[us]
+ *   For NUCLEO_F070RB DELTA = (15000 /  48000000) * 1000000 = 312[us]
+ *   For NRF51_DK      DELTA = (15000 /  16000000) * 1000000 = 937[us]
  */
 #define US_PER_SEC       1000000
 #define US_PER_MSEC      1000
-#define TOLERANCE_FACTOR 30000.0f
+#define TOLERANCE_FACTOR 15000.0f
 #define US_FACTOR        1000000.0f
 
 static const int delta_sys_clk_us = ((int) (TOLERANCE_FACTOR / (float)SystemCoreClock * US_FACTOR));
@@ -56,15 +56,12 @@ static const int delta_sys_clk_us = ((int) (TOLERANCE_FACTOR / (float)SystemCore
  #define DELTA_S(i)  ((float)delta_sys_clk_us * i / US_PER_SEC)
  #define DELTA_MS(i) (1 + ( (i * delta_sys_clk_us) / US_PER_MSEC))
 
-#define TICKER_FREQ_1MHZ 1000000
-#define TICKER_BITS 32
-
 static Timer *p_timer = NULL;
 
 /* Global variable used to simulate passage of time
  * in case when timer which uses user ticker is tested.
  */
-static uint32_t curr_ticker_ticks_val;
+static uint32_t curr_ticker_us_val;
 
 /* User ticker interface function. */
 static void stub_interface_init()
@@ -77,7 +74,7 @@ static void stub_interface_init()
 static uint32_t stub_ticker_read(void)
 {
     /* Simulate elapsed time. */
-    return curr_ticker_ticks_val;
+    return curr_ticker_us_val;
 }
 
 /* User ticker interface function. */
@@ -104,14 +101,6 @@ static void stub_fire_interrupt(void)
     /* do nothing. */
 }
 
-ticker_info_t info =
-{ TICKER_FREQ_1MHZ, TICKER_BITS };
-
-const ticker_info_t * stub_get_info(void)
-{
-    return &info;
-}
-
 /* User ticker event queue. */
 static ticker_event_queue_t my_events = { 0 };
 
@@ -123,7 +112,6 @@ static const ticker_interface_t us_interface = {
     .clear_interrupt = stub_clear_interrupt,
     .set_interrupt = stub_set_interrupt,
     .fire_interrupt = stub_fire_interrupt,
-    .get_info = stub_get_info,
 };
 
 /* User ticker data structure. */
@@ -191,9 +179,9 @@ void test_timer_creation_os_ticker()
 {
     /* Check results. */
     TEST_ASSERT_EQUAL_FLOAT(0, p_timer->read());
-    TEST_ASSERT_EQUAL_INT32(0, p_timer->read_ms());
-    TEST_ASSERT_EQUAL_INT32(0, p_timer->read_us());
-    TEST_ASSERT_EQUAL_UINT64(0, p_timer->read_high_resolution_us());
+    TEST_ASSERT_EQUAL(0, p_timer->read_ms());
+    TEST_ASSERT_EQUAL(0, p_timer->read_us());
+    TEST_ASSERT_EQUAL(0, p_timer->read_high_resolution_us());
 
     /* Wait 10 ms.
      * After that operation timer read routines should still return 0. */
@@ -201,16 +189,16 @@ void test_timer_creation_os_ticker()
 
     /* Check results. */
     TEST_ASSERT_EQUAL_FLOAT(0, p_timer->read());
-    TEST_ASSERT_EQUAL_INT32(0, p_timer->read_ms());
-    TEST_ASSERT_EQUAL_INT32(0, p_timer->read_us());
-    TEST_ASSERT_EQUAL_UINT64(0, p_timer->read_high_resolution_us());
+    TEST_ASSERT_EQUAL(0, p_timer->read_ms());
+    TEST_ASSERT_EQUAL(0, p_timer->read_us());
+    TEST_ASSERT_EQUAL(0, p_timer->read_high_resolution_us());
 }
 
 /* This test verifies if timer is stopped after
  * creation.
  *
  * Note: this function assumes that Timer uses user/fake ticker
- * which returns time value provided in curr_ticker_ticks_val
+ * which returns time value provided in curr_ticker_us_val
  * global variable.
  *
  * Given Timer has been successfully created.
@@ -221,30 +209,30 @@ void test_timer_creation_user_ticker()
 {
     /* For timer which is using user ticker simulate timer
      * creation time (irrelevant in case of os ticker). */
-    curr_ticker_ticks_val = 10000;
+    curr_ticker_us_val = 10000;
 
     /* Check results. */
     TEST_ASSERT_EQUAL_FLOAT(0, p_timer->read());
-    TEST_ASSERT_EQUAL_INT32(0, p_timer->read_ms());
-    TEST_ASSERT_EQUAL_INT32(0, p_timer->read_us());
-    TEST_ASSERT_EQUAL_UINT64(0, p_timer->read_high_resolution_us());
+    TEST_ASSERT_EQUAL(0, p_timer->read_ms());
+    TEST_ASSERT_EQUAL(0, p_timer->read_us());
+    TEST_ASSERT_EQUAL(0, p_timer->read_high_resolution_us());
 
     /* Simulate that 10 ms has elapsed.
      * After that operation timer read routines should still return 0. */
-    curr_ticker_ticks_val += 10000;
+    curr_ticker_us_val += 10000;
 
     /* Check results. */
     TEST_ASSERT_EQUAL_FLOAT(0, p_timer->read());
-    TEST_ASSERT_EQUAL_INT32(0, p_timer->read_ms());
-    TEST_ASSERT_EQUAL_INT32(0, p_timer->read_us());
-    TEST_ASSERT_EQUAL_UINT64(0, p_timer->read_high_resolution_us());
+    TEST_ASSERT_EQUAL(0, p_timer->read_ms());
+    TEST_ASSERT_EQUAL(0, p_timer->read_us());
+    TEST_ASSERT_EQUAL(0, p_timer->read_high_resolution_us());
 }
 
 /* This test verifies verifies if read(), read_us(), read_ms(),
  * read_high_resolution_us() functions returns valid values.
  *
  * Note: this function assumes that Timer uses user/fake ticker
- * which returns time value provided in curr_ticker_ticks_val
+ * which returns time value provided in curr_ticker_us_val
  * global variable.
  *
  * Given Timer has been successfully created and
@@ -256,115 +244,115 @@ void test_timer_creation_user_ticker()
 void test_timer_time_accumulation_user_ticker()
 {
     /* Simulate that current time is equal to 0 us. */
-    curr_ticker_ticks_val = 0;
+    curr_ticker_us_val = 0;
 
     /* Start the timer. */
     p_timer->start();
 
     /* -- Simulate that current time is equal to 1 us -- */
-    curr_ticker_ticks_val = 1;
+    curr_ticker_us_val = 1;
 
     /* Stop the timer. */
     p_timer->stop();
 
     /* Check results - 1 us has elapsed. */
     TEST_ASSERT_EQUAL_FLOAT(0.000001f, p_timer->read());
-    TEST_ASSERT_EQUAL_INT32(0, p_timer->read_ms());
-    TEST_ASSERT_EQUAL_INT32(1, p_timer->read_us());
-    TEST_ASSERT_EQUAL_UINT64(1, p_timer->read_high_resolution_us());
+    TEST_ASSERT_EQUAL(0, p_timer->read_ms());
+    TEST_ASSERT_EQUAL(1, p_timer->read_us());
+    TEST_ASSERT_EQUAL(1, p_timer->read_high_resolution_us());
 
     /* Simulate that 100 us has elapsed between stop and start. */
-    curr_ticker_ticks_val = 101;
+    curr_ticker_us_val = 101;
 
     /* Start the timer. */
     p_timer->start();
 
     /* -- Simulate that current time is equal to 225 us -- */
-    curr_ticker_ticks_val = 225;
+    curr_ticker_us_val = 225;
 
     /* Stop the timer. */
     p_timer->stop();
 
-    /* Check results - 125 us have elapsed. */
+    /* Check results - 126 us have elapsed. */
     TEST_ASSERT_EQUAL_FLOAT(0.000125f, p_timer->read());
-    TEST_ASSERT_EQUAL_INT32(0, p_timer->read_ms());
-    TEST_ASSERT_EQUAL_INT32(125, p_timer->read_us());
-    TEST_ASSERT_EQUAL_UINT64(125, p_timer->read_high_resolution_us());
+    TEST_ASSERT_EQUAL(0, p_timer->read_ms());
+    TEST_ASSERT_EQUAL(125, p_timer->read_us());
+    TEST_ASSERT_EQUAL(125, p_timer->read_high_resolution_us());
 
     /* Simulate that 100 us has elapsed between stop and start. */
-    curr_ticker_ticks_val = 325;
+    curr_ticker_us_val = 325;
 
     /* Start the timer. */
     p_timer->start();
 
     /* -- Simulate that current time is equal to 1200 us -- */
-    curr_ticker_ticks_val = 1200;
+    curr_ticker_us_val = 1200;
 
     /* Stop the timer. */
     p_timer->stop();
 
     /* Check results - 1 ms has elapsed. */
     TEST_ASSERT_EQUAL_FLOAT(0.001000f, p_timer->read());
-    TEST_ASSERT_EQUAL_INT32(1, p_timer->read_ms());
-    TEST_ASSERT_EQUAL_INT32(1000, p_timer->read_us());
-    TEST_ASSERT_EQUAL_UINT64(1000, p_timer->read_high_resolution_us());
+    TEST_ASSERT_EQUAL(1, p_timer->read_ms());
+    TEST_ASSERT_EQUAL(1000, p_timer->read_us());
+    TEST_ASSERT_EQUAL(1000, p_timer->read_high_resolution_us());
 
     /* Simulate that 100 us has elapsed between stop and start. */
-    curr_ticker_ticks_val = 1300;
+    curr_ticker_us_val = 1300;
 
     /* Start the timer. */
     p_timer->start();
 
     /* -- Simulate that current time is equal to 125300 us -- */
-    curr_ticker_ticks_val = 125300;
+    curr_ticker_us_val = 125300;
 
     /* Stop the timer. */
     p_timer->stop();
 
     /* Check results - 125 ms have elapsed. */
     TEST_ASSERT_EQUAL_FLOAT(0.125000f, p_timer->read());
-    TEST_ASSERT_EQUAL_INT32(125, p_timer->read_ms());
-    TEST_ASSERT_EQUAL_INT32(125000, p_timer->read_us());
-    TEST_ASSERT_EQUAL_UINT64(125000, p_timer->read_high_resolution_us());
+    TEST_ASSERT_EQUAL(125, p_timer->read_ms());
+    TEST_ASSERT_EQUAL(125000, p_timer->read_us());
+    TEST_ASSERT_EQUAL(125000, p_timer->read_high_resolution_us());
 
     /* Simulate that 100 us has elapsed between stop and start. */
-    curr_ticker_ticks_val = 125400;
+    curr_ticker_us_val = 125400;
 
     /* Start the timer. */
     p_timer->start();
 
     /* -- Simulate that current time is equal to 1000400 us -- */
-    curr_ticker_ticks_val = 1000400;
+    curr_ticker_us_val = 1000400;
 
     /* Stop the timer. */
     p_timer->stop();
 
     /* Check results - 1 s has elapsed. */
     TEST_ASSERT_EQUAL_FLOAT(1.000000f, p_timer->read());
-    TEST_ASSERT_EQUAL_INT32(1000, p_timer->read_ms());
-    TEST_ASSERT_EQUAL_INT32(1000000, p_timer->read_us());
-    TEST_ASSERT_EQUAL_UINT64(1000000, p_timer->read_high_resolution_us());
+    TEST_ASSERT_EQUAL(1000, p_timer->read_ms());
+    TEST_ASSERT_EQUAL(1000000, p_timer->read_us());
+    TEST_ASSERT_EQUAL(1000000, p_timer->read_high_resolution_us());
 
     /* Simulate that 100 us has elapsed between stop and start. */
-    curr_ticker_ticks_val = 1000500;
+    curr_ticker_us_val = 1000500;
 
     /* Start the timer. */
     p_timer->start();
 
     /* -- Simulate that current time is equal to 125000500 us -- */
-    curr_ticker_ticks_val = 125000500;
+    curr_ticker_us_val = 125000500;
 
     /* Stop the timer. */
     p_timer->stop();
 
     /* Check results - 125 s have elapsed. */
     TEST_ASSERT_EQUAL_FLOAT(125.000000f, p_timer->read());
-    TEST_ASSERT_EQUAL_INT32(125000, p_timer->read_ms());
-    TEST_ASSERT_EQUAL_INT32(125000000, p_timer->read_us());
-    TEST_ASSERT_EQUAL_UINT64(125000000, p_timer->read_high_resolution_us());
+    TEST_ASSERT_EQUAL(125000, p_timer->read_ms());
+    TEST_ASSERT_EQUAL(125000000, p_timer->read_us());
+    TEST_ASSERT_EQUAL(125000000, p_timer->read_high_resolution_us());
 
     /* Simulate that 100 us has elapsed between stop and start. */
-    curr_ticker_ticks_val = 125000600;
+    curr_ticker_us_val = 125000600;
 
     /* Start the timer. */
     p_timer->start();
@@ -376,16 +364,16 @@ void test_timer_time_accumulation_user_ticker()
      * while timers are based on 32-bit signed int microsecond counters,
      * so timers can only count up to a maximum of 2^31-1 microseconds i.e.
      * 2147483647 us (about 35 minutes). */
-    curr_ticker_ticks_val = 2147484247;
+    curr_ticker_us_val = 2147484247;
 
     /* Stop the timer. */
     p_timer->stop();
 
     /* Check results - 2147483647 (MAX_INT_32) us have elapsed. */
     TEST_ASSERT_EQUAL_FLOAT(2147.483647f, p_timer->read());
-    TEST_ASSERT_EQUAL_INT32(2147483, p_timer->read_ms());
-    TEST_ASSERT_EQUAL_INT32(2147483647, p_timer->read_us());
-    TEST_ASSERT_EQUAL_UINT64(2147483647, p_timer->read_high_resolution_us());
+    TEST_ASSERT_EQUAL(2147483, p_timer->read_ms());
+    TEST_ASSERT_EQUAL(2147483647, p_timer->read_us());
+    TEST_ASSERT_EQUAL(2147483647, p_timer->read_high_resolution_us());
 }
 
 /* This test verifies if read(), read_us(), read_ms(),
@@ -546,22 +534,22 @@ void test_timer_reset_user_ticker()
 {
     /* For timer which is using user ticker simulate set current
      * time (irrelevant in case of os ticker). */
-    curr_ticker_ticks_val = 0;
+    curr_ticker_us_val = 0;
 
     /* First measure 10 ms delay. */
     p_timer->start();
 
     /* Simulate that 10 ms have elapsed. */
-    curr_ticker_ticks_val = 10000;
+    curr_ticker_us_val = 10000;
 
     /* Stop the timer. */
     p_timer->stop();
 
     /* Check results - totally 10 ms elapsed. */
-    TEST_ASSERT_EQUAL_FLOAT(0.010f, p_timer->read());
-    TEST_ASSERT_EQUAL_INT32(10, p_timer->read_ms());
-    TEST_ASSERT_EQUAL_INT32(10000, p_timer->read_us());
-    TEST_ASSERT_EQUAL_UINT64(10000, p_timer->read_high_resolution_us());
+    TEST_ASSERT_FLOAT_WITHIN(DELTA_S(1), 0.010f, p_timer->read());
+    TEST_ASSERT_INT32_WITHIN(DELTA_MS(1), 10, p_timer->read_ms());
+    TEST_ASSERT_INT32_WITHIN(DELTA_US(1), 10000, p_timer->read_us());
+    TEST_ASSERT_UINT64_WITHIN(DELTA_US(1), 10000, p_timer->read_high_resolution_us());
 
     /* Reset the timer - previous measured time should be lost now. */
     p_timer->reset();
@@ -570,16 +558,16 @@ void test_timer_reset_user_ticker()
     p_timer->start();
 
     /* Simulate that 20 ms have elapsed. */
-    curr_ticker_ticks_val = 30000;
+    curr_ticker_us_val = 30000;
 
     /* Stop the timer. */
     p_timer->stop();
 
     /* Check results - 20 ms elapsed since the reset. */
-    TEST_ASSERT_EQUAL_FLOAT(0.020f, p_timer->read());
-    TEST_ASSERT_EQUAL_INT32(20, p_timer->read_ms());
-    TEST_ASSERT_EQUAL_INT32(20000, p_timer->read_us());
-    TEST_ASSERT_EQUAL_UINT64(20000, p_timer->read_high_resolution_us());
+    TEST_ASSERT_FLOAT_WITHIN(DELTA_S(1), 0.020f, p_timer->read());
+    TEST_ASSERT_INT32_WITHIN(DELTA_MS(1), 20, p_timer->read_ms());
+    TEST_ASSERT_INT32_WITHIN(DELTA_US(1), 20000, p_timer->read_us());
+    TEST_ASSERT_UINT64_WITHIN(DELTA_US(1), 20000, p_timer->read_high_resolution_us());
 }
 
 /* This test verifies if calling start() for already
@@ -628,19 +616,19 @@ void test_timer_start_started_timer_user_ticker()
 {
     /* For timer which is using user ticker set current
      * time (irrelevant in case of os ticker). */
-    curr_ticker_ticks_val = 0;
+    curr_ticker_us_val = 0;
 
     /* Start the timer. */
     p_timer->start();
 
     /* Simulate that 10 ms have elapsed. */
-    curr_ticker_ticks_val = 10000;
+    curr_ticker_us_val = 10000;
 
     /* Now start timer again. */
     p_timer->start();
 
     /* Simulate that 20 ms have elapsed. */
-    curr_ticker_ticks_val = 30000;
+    curr_ticker_us_val = 30000;
 
     /* Stop the timer. */
     p_timer->stop();
@@ -689,19 +677,19 @@ void test_timer_float_operator_user_ticker()
 {
     /* For timer which is using user ticker set current
      * time (irrelevant in case of os ticker). */
-    curr_ticker_ticks_val = 0;
+    curr_ticker_us_val = 0;
 
     /* Start the timer. */
     p_timer->start();
 
     /* Simulate that 10 ms have elapsed. */
-    curr_ticker_ticks_val = 10000;
+    curr_ticker_us_val = 10000;
 
     /* Stop the timer. */
     p_timer->stop();
 
     /* Check result - 10 ms elapsed. */
-    TEST_ASSERT_EQUAL_FLOAT(0.010f, (float)(*p_timer));
+    TEST_ASSERT_FLOAT_WITHIN(DELTA_S(1), 0.010f, (float)(*p_timer));
 }
 
 /* This test verifies if time counted by the timer is
