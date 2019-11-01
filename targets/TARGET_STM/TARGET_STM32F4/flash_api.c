@@ -26,6 +26,7 @@
 
 static uint32_t GetSector(uint32_t Address);
 static uint32_t GetSectorSize(uint32_t Sector);
+static void flush_caches(void);
 
 int32_t flash_init(flash_t *obj)
 {
@@ -86,6 +87,9 @@ int32_t flash_erase_sector(flash_t *obj, uint32_t address)
         status = -1;
     }
 
+    /* Make sure outstanding transfers are done */
+    FLASH_FlushCaches();
+
     flash_lock();
 
     return status;
@@ -107,14 +111,7 @@ int32_t flash_program_page(flash_t *obj, uint32_t address, const uint8_t *data, 
        you have to make sure that these data are rewritten before they are accessed during code
        execution. If this cannot be done safely, it is recommended to flush the caches by setting the
        DCRST and ICRST bits in the FLASH_CR register. */
-    __HAL_FLASH_DATA_CACHE_DISABLE();
-    __HAL_FLASH_INSTRUCTION_CACHE_DISABLE();
-
-    __HAL_FLASH_DATA_CACHE_RESET();
-    __HAL_FLASH_INSTRUCTION_CACHE_RESET();
-
-    __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
-    __HAL_FLASH_DATA_CACHE_ENABLE();
+    FLASH_FlushCaches();
 
     while ((size > 0) && (status == 0)) {
         if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, address, (uint64_t)*data) != HAL_OK) {
@@ -125,6 +122,9 @@ int32_t flash_program_page(flash_t *obj, uint32_t address, const uint8_t *data, 
             data++;
         }
     }
+
+    /* Make sure outstanding transfers are done */
+    FLASH_FlushCaches();
 
     flash_lock();
 
@@ -224,5 +224,4 @@ uint8_t flash_get_erase_value(const flash_t *obj)
 
     return 0xFF;
 }
-
 #endif
